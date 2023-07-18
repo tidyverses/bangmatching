@@ -49,29 +49,6 @@ def init_fics(numfics, people):
     return fics
 
 
-def samplenames(numfics, matches):
-    finalmatches = matches
-    people = {}
-    names = ['Alice', 'Arthur', 'Brenda', 'Bob', 'Christine', 'Charlie', 'Dana', 'Donald', 'Ella', 'Ethan',
-          'Farrah', 'Frank', 'Greta', 'George', 'Helen', 'Harry', 'Irma', 'Isaac', 'Joan', 'Jacob',
-          'Kathy', 'Kyle', 'Lauren', 'Louis', 'Megan', 'Miles', 'Nina', 'Nathan', 'Olivia', 'Oliver',
-          'Patty', 'Peter', 'Quinn', 'Quentin', 'Ruth', 'Ryan', 'Sarah', 'Sam', 'Tina', 'Tyler', 'Ursula',
-          'Ulysses', 'Virginia', 'Victor', 'Winona', 'Wyatt', 'Ximena', 'Xavier', 'Yvonne', 'Yosef',
-          'Zinnia', 'Zander']
-    names = names[:45]
-    for x in range(len(names)):
-        people[names[x]] = np.random.choice(np.arange(1, numfics+1), replace=False, size=(5)).tolist()
-
-    for x in range(numfics):
-        fics[x + 1] = []
-        finalmatches[x + 1] = []
-
-    for person in people.keys():
-        for fic in people[person]:
-            fics[fic].append([person, people[person].index(fic) + 1])
-
-    return people, fics, finalmatches
-
 def round(rank, ficarray, matches, people):
     finalmatches = matches
     for fic in ficarray.keys():
@@ -87,6 +64,7 @@ def round(rank, ficarray, matches, people):
 
     return finalmatches
 
+
 def main_algorithm(people, fics, matches):
     finalmatches = matches
     newnames = [x for x in people.keys() if not x in finalmatches.values()]
@@ -98,8 +76,6 @@ def main_algorithm(people, fics, matches):
         newnames = [x for x in people.keys() if not x in finalmatches.values()]
         if len(newnames) == 0:
             return finalmatches
-            
-    
     
     # go through each fics - if one or more people ranked the fic #1, 
     # choose one of the #1 rankers at random and assign them the fic.
@@ -138,6 +114,7 @@ def main_algorithm(people, fics, matches):
 
     return finalmatches
 
+
 def export_matches(people, matches, extramatches):
     finalmatches = matches
     dfoutput = {'Fic': list(finalmatches.keys()), 
@@ -170,7 +147,6 @@ if __name__ == '__main__':
                                                     "Fourth Choice Fic", "Fifth Choice Fic"], 
                                                     int(sys.argv[2]), originalmatches)
     
-    #originalpeople, fics, originalmatches = samplenames(38, originalmatches)
     extramatches = originalmatches.copy()
     finalmatches = originalmatches.copy()
     finalmatches = main_algorithm(originalpeople, fics, finalmatches)
@@ -182,4 +158,4 @@ if __name__ == '__main__':
     extramatches = main_algorithm(newpeople, extrafics, extramatches)
     export_matches(originalpeople, finalmatches, extramatches)
     
-    
+        
