@@ -4,6 +4,17 @@ import pandas as pd
 import random
 import sys
 
+# numbers not assigned to fics
+NULL_FICS = [1, 14, 17, 18, 22, 23, 25, 28, 31, 34, 37, 43, 44]
+# names of fields on input Excel spreadsheets
+FIELDS_OF_INTEREST = [
+                      "Preferred Name",    # artist name
+                      "First Choice Fic",  # fic ranked 1
+                      "Second Choice Fic", # fic ranked 2
+                      "Third Choice Fic",  # fic ranked 3
+                      "Fourth Choice Fic", # fic ranked 4
+                      "Fifth Choice Fic"]  # fic ranked 5
+
 def import_input_file(filename, headings, numfics, matches):
     finalmatches = matches
     people = {}
@@ -41,11 +52,9 @@ def init_fics(numfics, people):
 
     for x in range(numfics):
         fics[x + 1] = []
-
     for person in people.keys():
         for fic in people[person]:
             fics[fic].append([person, people[person].index(fic) + 1])
-
     return fics
 
 
@@ -65,18 +74,18 @@ def round(rank, ficarray, matches, people):
     return finalmatches
 
 
-def main_algorithm(people, fics, matches):
+def main_algorithm(people, fics, matches, extra):
     finalmatches = matches
     newnames = [x for x in people.keys() if not x in finalmatches.values()]
 
-    # before matching, if any fic has only 1 person who ranked, give them that fic
-    for fic in fics.keys():
-        if len(fics[fic]) == 1 and fics[fic][0][0] not in finalmatches.values():
-            finalmatches[fic] = fics[fic][0][0]
-        newnames = [x for x in people.keys() if not x in finalmatches.values()]
-        if len(newnames) == 0:
-            return finalmatches
-    
+    if extra == False:
+        # before matching, if any fic has only 1 person who ranked, give them that fic
+        for fic in fics.keys():
+            if len(fics[fic]) == 1 and fics[fic][0][0] not in finalmatches.values():
+                finalmatches[fic] = fics[fic][0][0]
+            newnames = [x for x in people.keys() if not x in finalmatches.values()]
+            if len(newnames) == 0:
+                return finalmatches
     # go through each fics - if one or more people ranked the fic #1, 
     # choose one of the #1 rankers at random and assign them the fic.
     # then go through the unassigned fics - if one or more people ranked the fic #2,
@@ -87,6 +96,7 @@ def main_algorithm(people, fics, matches):
 
     while ranksleft > 0:
         for x in range(ranksleft):
+            print(x + 6-ranksleft)
             finalmatches = round(x+(ranksleft-4), fics, finalmatches, people)
             newnames = [x for x in people.keys() if not x in finalmatches.values()]
             if len(newnames) == 0:
@@ -123,39 +133,58 @@ def export_matches(people, matches, extramatches):
                 'Artist 2': list(extramatches.values()), 
                 'Artist 2 Ranking':[0]*len(finalmatches.keys()),}
     for fic in finalmatches.keys():
-        name = finalmatches[fic]
-        if name != []:
-            dfoutput['Artist 1 Ranking'][fic - 1] = people[name].index(fic) + 1
+        if fic in NULL_FICS:
+            dfoutput['Artist 1'][fic - 1] = '---'
+            dfoutput['Artist 1 Ranking'][fic - 1] = "---"
+            dfoutput['Artist 2'][fic - 1] = '---'
+            dfoutput['Artist 2 Ranking'][fic - 1] = "---"
         else:
-            dfoutput['Artist 1 Ranking'][fic - 1] = ''
-            dfoutput['Artist 1'][fic - 1] = ''
-        name2 = extramatches[fic]
-        if name2 != []:
-            dfoutput['Artist 2 Ranking'][fic - 1] = people[name].index(fic) + 1
-        else:
-            dfoutput['Artist 2 Ranking'][fic - 1] = ''
-            dfoutput['Artist 2'][fic - 1] = ''
+            name = finalmatches[fic]
+            if name != []:
+                dfoutput['Artist 1 Ranking'][fic - 1] = people[name].index(fic) + 1
+            else:
+                dfoutput['Artist 1 Ranking'][fic - 1] = ''
+                dfoutput['Artist 1'][fic - 1] = ''
+            name2 = extramatches[fic]
+            if name2 != []:
+                dfoutput['Artist 2 Ranking'][fic - 1] = people[name2].index(fic) + 1
+            else:
+                dfoutput['Artist 2 Ranking'][fic - 1] = ''
+                dfoutput['Artist 2'][fic - 1] = ''
     df2 = pd.DataFrame(data=dfoutput)
     df2.to_excel("matches.xlsx") 
 
 
 if __name__ == '__main__':
     originalmatches = {}
-    originalpeople, fics, originalmatches = import_input_file(sys.argv[1], 
-                                                ["Preferred Name", "First Choice Fic", 
-                                                    "Second Choice Fic", "Third Choice Fic", 
-                                                    "Fourth Choice Fic", "Fifth Choice Fic"], 
+    originalpeople, originalfics, originalmatches = import_input_file(sys.argv[1], FIELDS_OF_INTEREST, 
                                                     int(sys.argv[2]), originalmatches)
     
+    for fic in originalfics:
+        print(str(fic) + " " + str(originalfics[fic][:int(len(originalfics[fic]) / 2)]))
+        originalfics[fic] = originalfics[fic][:int(len(originalfics[fic]) / 2)]
+    
+    fics = originalfics.copy()
     extramatches = originalmatches.copy()
     finalmatches = originalmatches.copy()
-    finalmatches = main_algorithm(originalpeople, fics, finalmatches)
+    # generates first-artist matches until it comes up with a result where all fics have 1 artist
+    while list(finalmatches.values()).count([]) > len(NULL_FICS):
+        fics = originalfics.copy()
+        people = originalpeople.copy()   
+        extramatches = originalmatches.copy()
+        finalmatches = originalmatches.copy()
+        finalmatches = main_algorithm(people, fics, finalmatches, False)
+    # removes matched artists from list of artists left to match    
     newpeople = originalpeople.copy()
     for k in list(finalmatches.values()):
         if k != []:
             newpeople.pop(k, None)
-    extrafics = init_fics(38, newpeople)
-    extramatches = main_algorithm(newpeople, extrafics, extramatches)
+    # runs matching again with remaining artists to generate second-artist matches
+    extrafics = init_fics(int(sys.argv[2]), newpeople)
+    extramatches = main_algorithm(newpeople, extrafics, extramatches, True)
+    # put matches in excel spreadsheet
     export_matches(originalpeople, finalmatches, extramatches)
+    
+    
     
         
