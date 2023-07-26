@@ -96,7 +96,7 @@ def main_algorithm(people, fics, matches, extra):
 
     while ranksleft > 0:
         for x in range(ranksleft):
-            print(x + 6-ranksleft)
+            #print(x + 6-ranksleft)
             finalmatches = round(x+(ranksleft-4), fics, finalmatches, people)
             newnames = [x for x in people.keys() if not x in finalmatches.values()]
             if len(newnames) == 0:
@@ -161,7 +161,7 @@ if __name__ == '__main__':
                                                     int(sys.argv[2]), originalmatches)
     
     for fic in originalfics:
-        print(str(fic) + " " + str(originalfics[fic][:int(len(originalfics[fic]) / 2)]))
+        #print(str(fic) + " " + str(originalfics[fic][:int(len(originalfics[fic]) / 2)]))
         originalfics[fic] = originalfics[fic][:int(len(originalfics[fic]) / 2)]
     
     fics = originalfics.copy()
@@ -184,6 +184,8 @@ if __name__ == '__main__':
     extramatches = main_algorithm(newpeople, extrafics, extramatches, True)
     # put matches in excel spreadsheet
     export_matches(originalpeople, finalmatches, extramatches)
+    
+    
     
     
     
