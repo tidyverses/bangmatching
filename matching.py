@@ -65,6 +65,7 @@ def round(rank, ficarray, matches, people):
         for person in ficarray[fic]:
             if person[1] == rank and finalmatches[fic] == [] and person[0] not in finalmatches.values():
                 finalmatches[fic] = person[0]
+                break
         newlist = [x for x in ficarray[fic] if not (x[1] == rank or x[0] in finalmatches.values())]
         ficarray[fic] = newlist
         newnames = [x for x in people.keys() if not x in finalmatches.values()]
@@ -94,10 +95,15 @@ def main_algorithm(people, fics, matches, extra):
     originalfics = fics.copy()
     ranksleft = 5
 
+    ranks = [1, 2, 1, 2, 1, 3]
+    curr_rank = 0
     while ranksleft > 0:
         for x in range(ranksleft):
             #print(x + 6-ranksleft)
-            finalmatches = round(x+(ranksleft-4), fics, finalmatches, people)
+            #finalmatches = round(x+(ranksleft-4), fics, finalmatches, people)
+            finalmatches = round(ranks[curr_rank], fics, finalmatches, people)
+            curr_rank = curr_rank + 1
+            if curr_rank == len(ranks): curr_rank = 0
             newnames = [x for x in people.keys() if not x in finalmatches.values()]
             if len(newnames) == 0:
                 break
@@ -114,13 +120,19 @@ def main_algorithm(people, fics, matches, extra):
     for fic in finalmatches.keys():
         if finalmatches[fic] == []:
             for person in originalfics[fic]:
+                if person[0] in newnames:
+                    finalmatches[fic] = person[0]
+                    break
                 persons_old_fic = list(finalmatches.keys())[list(finalmatches.values()).index(person[0])]
                 unused_list_takers = list(set(newnames) & set(list(map(itemgetter(0), originalfics[persons_old_fic]))))
                 if len(unused_list_takers) > 0:
                     finalmatches[fic] = person[0]
                     finalmatches[persons_old_fic] = unused_list_takers[0]
                     break
+
                 newnames = [x for x in people.keys() if not x in finalmatches.values()]
+                if finalmatches[fic] != []:
+                    break
 
     return finalmatches
 
@@ -155,11 +167,7 @@ def export_matches(people, matches, extramatches):
     df2.to_excel("matches.xlsx") 
 
 
-if __name__ == '__main__':
-    originalmatches = {}
-    originalpeople, originalfics, originalmatches = import_input_file(sys.argv[1], FIELDS_OF_INTEREST, 
-                                                    int(sys.argv[2]), originalmatches)
-    
+def entire_matching_process(originalpeople, originalfics, originalmatches):
     for fic in originalfics:
         #print(str(fic) + " " + str(originalfics[fic][:int(len(originalfics[fic]) / 2)]))
         originalfics[fic] = originalfics[fic][:int(len(originalfics[fic]) / 2)]
@@ -182,8 +190,50 @@ if __name__ == '__main__':
     # runs matching again with remaining artists to generate second-artist matches
     extrafics = init_fics(int(sys.argv[2]), newpeople)
     extramatches = main_algorithm(newpeople, extrafics, extramatches, True)
+
+    # get total of first, second, third choice rankings
+    rankings = [0] * 5
+    rankings = get_rankings(originalpeople, finalmatches, rankings)
+    rankings = get_rankings(originalpeople, extramatches, rankings)
+    return finalmatches, extramatches, rankings
+
+
+def get_rankings(people, matches, totalrankings):
+    rankings = totalrankings
+    for fic in matches.keys():
+        name = matches[fic]
+        if name != []:
+            ranking = people[name].index(fic) + 1
+            rankings[ranking - 1] += 1
+    return totalrankings
+
+
+if __name__ == '__main__':
+    best_run_score = 0
+    best_run_rankings = [0] * 5
+    best_finalmatches = {}
+    best_extramatches = {}
+
+    for x in range(int(sys.argv[3])):
+        originalmatches = {}
+        originalpeople, originalfics, originalmatches = import_input_file(sys.argv[1], FIELDS_OF_INTEREST, 
+                                                        int(sys.argv[2]), originalmatches)
+        
+        
+        finalmatches, extramatches, rankings = entire_matching_process(originalpeople, originalfics, originalmatches)
+        if rankings[0] + rankings[1] + rankings[2] + rankings[3] + rankings[4] != len(originalpeople.keys()):
+            continue
+        if rankings[0] + rankings[1] + rankings[2] - rankings[4] > best_run_score or (rankings[0] + rankings[1] + rankings[2] - rankings[4] == best_run_score and rankings[0] > best_run_rankings[0]):
+            if rankings[0] - best_run_rankings[0] > -2:
+                best_run_score = rankings[0] + rankings[1] + rankings[2] - rankings[4]
+                best_run_rankings = rankings
+                best_finalmatches = finalmatches.copy()
+                best_extramatches = extramatches.copy()
+
+    #print(best_run_rankings)
     # put matches in excel spreadsheet
-    export_matches(originalpeople, finalmatches, extramatches)
+    export_matches(originalpeople, best_finalmatches, best_extramatches)
+    
     
     
     
