@@ -3,6 +3,8 @@ from operator import itemgetter
 import pandas as pd
 import random
 import sys
+import time
+import os
 
 # numbers not assigned to fics
 NULL_FICS = [1, 14, 17, 18, 22, 23, 25, 28, 31, 34, 37, 43, 44]
@@ -207,6 +209,28 @@ def get_rankings(people, matches, totalrankings):
             rankings[ranking - 1] += 1
     return totalrankings
 
+# from stackoverflow https://stackoverflow.com/questions/3173320/text-progress-bar-in-terminal-with-block-characters
+def printProgressBar (iteration, total, stats, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█', printEnd = "\r"):
+    """
+    Call in a loop to create terminal progress bar
+    @params:
+        iteration   - Required  : current iteration (Int)
+        total       - Required  : total iterations (Int)
+        prefix      - Optional  : prefix string (Str)
+        suffix      - Optional  : suffix string (Str)
+        decimals    - Optional  : positive number of decimals in percent complete (Int)
+        length      - Optional  : character length of bar (Int)
+        fill        - Optional  : bar fill character (Str)
+        printEnd    - Optional  : end character (e.g. "\r", "\r\n") (Str)
+    """
+    percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
+    filledLength = int(length * iteration // total)
+    bar = fill * filledLength + '-' * (length - filledLength)
+    print(f'\r{prefix} |{bar}| {percent}% {suffix}', end = printEnd) # printEnd
+    # Print New Line on Complete
+    if iteration == total: 
+        print()
+
 
 if __name__ == '__main__':
     best_run_score = 0
@@ -214,6 +238,9 @@ if __name__ == '__main__':
     best_finalmatches = {}
     best_extramatches = {}
 
+    stats = "\n\rcurrent best run: {} first choice rankings, {} second choice rankings, {} third choice rankings, {} fourth choice rankings, {} fifth choice rankings\r".format(best_run_rankings[0], best_run_rankings[1], best_run_rankings[2],best_run_rankings[3],best_run_rankings[4])
+        
+    printProgressBar(0, int(sys.argv[3]), stats, prefix = 'Progress:', suffix = 'Complete', length = 50)
     for x in range(int(sys.argv[3])):
         originalmatches = {}
         originalpeople, originalfics, originalmatches = import_input_file(sys.argv[1], FIELDS_OF_INTEREST, 
@@ -221,17 +248,36 @@ if __name__ == '__main__':
         
         
         finalmatches, extramatches, rankings = entire_matching_process(originalpeople, originalfics, originalmatches)
+        
         if rankings[0] + rankings[1] + rankings[2] + rankings[3] + rankings[4] != len(originalpeople.keys()):
             continue
-        if rankings[0] + rankings[1] + rankings[2] - rankings[4] > best_run_score or (rankings[0] + rankings[1] + rankings[2] - rankings[4] == best_run_score and rankings[0] > best_run_rankings[0]):
-            if rankings[0] - best_run_rankings[0] > -2:
-                best_run_score = rankings[0] + rankings[1] + rankings[2] - rankings[4]
-                best_run_rankings = rankings
-                best_finalmatches = finalmatches.copy()
-                best_extramatches = extramatches.copy()
-
-    #print(best_run_rankings)
+        
+        conditions = [rankings[0] + rankings[1] + rankings[2] - rankings[4] > best_run_score, # more (top 3 rankings - 5 rankings) than best run
+                      (rankings[0] + rankings[1] + rankings[2] - rankings[4] == best_run_score and rankings[0] > best_run_rankings[0]), #same (top 3 rankings - 5 rankings) and more first run rankings as best run 
+                      rankings[0] - best_run_rankings[0] > -2 #no more than two fewer 1 rankings than best run
+                      ] 
+        
+        if (conditions[0] or conditions[1]) and conditions[2]:
+            best_run_score = rankings[0] + rankings[1] + rankings[2] - rankings[4]
+            best_run_rankings = rankings
+            best_finalmatches = finalmatches.copy()
+            best_extramatches = extramatches.copy()
+        
+        stats = "\ncurrent best run: \n{} first choice rankings\n{} second choice rankings\n{} third choice rankings\n{} fourth choice rankings\n{} fifth choice rankings\n\r".format(best_run_rankings[0], best_run_rankings[1], best_run_rankings[2],best_run_rankings[3],best_run_rankings[4])
+        
+        #time.sleep(0.001)
+        # Update Progress Bar
+        printProgressBar(x + 1, int(sys.argv[3]), stats, prefix = 'Progress:', suffix = 'Complete', length = 50)
+        
+        sys.stdout.flush()
+        if(x == int(sys.argv[3]) - 1): 
+            sys.stdout.write("\x1b[1A"*1)
+        print(stats, end='\r')
+        sys.stdout.write("\x1b[1A"*7)
+        
+        
     # put matches in excel spreadsheet
+    print("\n\n\n\r\r\r\n\r\n\r\n\r\n")
     export_matches(originalpeople, best_finalmatches, best_extramatches)
     
     
