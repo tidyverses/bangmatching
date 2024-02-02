@@ -13,6 +13,8 @@ Takes in Excel spreadsheet (Google Form response sheet generated during claims p
 | Fourth Choice Fic  | identifier of artist's fourth-choice fic (string, in the format ficnumber-ficname)  |
 | Fifth Choice Fic  | identifier of artist's fifth-choice fic (string, in the format ficnumber-ficname)  |
 
+If any numbers are not associated with fics involved in the claims process (for example, if the author of 10-coffee-shop-au dropped out between the initial check-in and the fic draft deadline), add these numbers to the array ``NULL_FICS = []`` before running script.
+
 Outputs Excel spreadsheet (matches.xlsx) with fic-artist pairings, selecting optimal run (optimizing for most first/second/third choice rankings and least fifth choice rankings) out of X runs. Recommend 100-1000 runs.
 
 Runs in, like, O(N^4) time, but shhhh we don't talk about that :)
